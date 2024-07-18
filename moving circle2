@@ -1,0 +1,155 @@
+#include <windows.h>
+#include <windows.h>
+#include <TCHAR.h>
+
+LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam);
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLine, int nCmdShow)
+{
+    HWND     hwnd;
+    MSG       msg;
+    WNDCLASS WndClass;
+    WndClass.style = CS_HREDRAW | CS_VREDRAW;
+    WndClass.lpfnWndProc = WndProc;
+    WndClass.cbClsExtra = 0;
+    WndClass.cbWndExtra = 0;
+    WndClass.hInstance = hInstance;
+    WndClass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+    WndClass.hCursor = LoadCursor(NULL, IDC_ARROW);
+    WndClass.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+    WndClass.lpszMenuName = NULL;
+    WndClass.lpszClassName = _T("Window Class Name");
+    RegisterClass(&WndClass);
+    hwnd = CreateWindow(_T("Window Class Name"),
+        _T("Window Title Name"),
+        WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        NULL,
+        NULL,
+        hInstance,
+        NULL
+    );
+    ShowWindow(hwnd, nCmdShow);
+    UpdateWindow(hwnd);
+    while (GetMessage(&msg, NULL, 0, 0))
+    {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    return (int)msg.wParam;
+}
+LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam) {
+
+    HDC hdc;
+    PAINTSTRUCT ps;
+    SYSTEMTIME st;
+    static int x, y,x1,y1,k;
+    static RECT rectView;
+    HPEN hPen, oldPen;
+
+    BOOL GetClientRect(HWND hwnd, LPRECT lprect);
+  
+    switch (iMsg) {
+
+    case WM_CREATE:
+        x = 20; y = 20;
+        x1 = 60, y1 = 20;
+        k = 0;
+        break;
+
+    case WM_PAINT:
+        GetClientRect(hwnd, &rectView);
+        hdc = BeginPaint(hwnd, &ps);
+        Rectangle(hdc, 0, 0, 40 *(int)(rectView.right / 40), 40 * (int)(rectView.bottom / 40));
+
+        hPen = CreatePen(PS_SOLID, 1, RGB(0, 0, 255));
+        oldPen = (HPEN)SelectObject(hdc, hPen);
+        Ellipse(hdc, x - 20, y - 20, x + 20, y + 20);
+        SelectObject(hdc, oldPen); 
+        DeleteObject(hPen);
+
+
+        hPen = CreatePen(PS_SOLID, 1, RGB(255, 0, 0));
+        oldPen = (HPEN)SelectObject(hdc, hPen);
+        Ellipse(hdc, x1 - 20, y1 - 20, x1 + 20, y1 + 20);
+        SelectObject(hdc, oldPen);
+        DeleteObject(hPen);
+        
+        EndPaint(hwnd, &ps);
+        return 0;
+
+    case WM_KEYDOWN:
+        SetTimer(hwnd, 1, 70, NULL);
+        if (wParam == VK_RIGHT) {
+            k = 1;
+            x1= x + 40;
+            y1 = y;
+        }
+        else if (wParam == VK_LEFT) {
+            k = 2;
+            x1 = x - 40;
+            y1 = y;
+        }
+        else if (wParam == VK_UP) {
+            k = 3;
+            x1 = x;
+            y1 = y - 40;
+        }
+        else if (wParam == VK_DOWN) {
+
+            k = 4;
+            x1 = x;
+            y1 = y + 40;
+        }
+        InvalidateRgn(hwnd, NULL, TRUE);
+        break;
+
+    case WM_TIMER:
+        if (k==1) {
+            x += 40;     
+            x1 += 40;
+            if (x1 + 20 > rectView.right) {
+                x1 -= 40;
+                x -= 40;
+            }
+   
+        }
+        else if (k == 2) {
+            x -= 40;
+            x1 -= 40;
+            if (x1 - 20 < rectView.left) {
+                x += 40;
+                x1 += 40;
+            }
+        }
+         
+        else if (k==3) {
+            y -= 40;
+            y1 -= 40;
+            if (y1 - 20 < rectView.top) {
+                y += 40;
+                y1 += 40;
+            }  
+        }
+        else if (k == 4) {
+            y += 40;
+            y1 += 40;
+            if (y1 + 20 > rectView.bottom) {
+                y -= 40;
+                y1 -= 40;
+            }
+            
+        }
+        InvalidateRgn(hwnd, NULL, TRUE);
+        break;
+
+    case WM_DESTROY:
+        KillTimer(hwnd, 1);
+        PostQuitMessage(0);
+        break;
+    }
+    return DefWindowProc(hwnd, iMsg, wParam, lParam);
+}
