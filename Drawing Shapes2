@@ -1,0 +1,234 @@
+#include <windows.h>
+#include <TCHAR.h>
+#include "resource.h"
+
+
+class point {
+    int x, y;
+public:
+    point(int xx, int yy) :x(xx), y(yy) {}
+    int getX() { return x; }
+    int getY() { return y; }
+};
+
+class object {
+protected:
+    point sp, ep;
+public:
+    object(int x1, int y1, int x2, int y2) :sp(x1, y1), ep(x2, y2) {}
+    virtual void Draw(HDC hdc) {};
+
+};
+
+class Line : public object {
+public:
+    Line(int x1, int y1, int x2, int y2) : object(x1, y1, x2, y2) {}
+    void Draw(HDC hdc)
+    {
+        MoveToEx(hdc, sp.getX(), sp.getY(), NULL);
+        LineTo(hdc, ep.getX(), ep.getY());
+    }
+};
+class Ellip : public object {
+public:
+    Ellip(int x1, int y1, int x2, int y2) : object(x1, y1, x2, y2) {}
+    void Draw(HDC hdc)
+    {
+        Ellipse(hdc, sp.getX(), sp.getY(), ep.getX(), ep.getY());
+    }
+};
+
+class Rect : public object {
+public:
+    Rect(int x1, int y1, int x2, int y2) : object(x1, y1, x2, y2) {}
+    void Draw(HDC hdc)
+    {
+        Rectangle(hdc, sp.getX(), sp.getY(), ep.getX(), ep.getY());
+    }
+};
+
+
+LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam);
+
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLine, int nCmdShow)
+{
+    HWND     hwnd;
+    MSG       msg;
+    WNDCLASS WndClass;
+    WndClass.style = CS_HREDRAW | CS_VREDRAW;
+    WndClass.lpfnWndProc = WndProc;
+    WndClass.cbClsExtra = 0;
+    WndClass.cbWndExtra = 0;
+    WndClass.hInstance = hInstance;
+    WndClass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+
+    WndClass.hCursor = LoadCursor(NULL, IDC_ARROW);     // 커서 지정
+
+    WndClass.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+    WndClass.lpszMenuName = MAKEINTRESOURCE(IDR_MENU1);
+    WndClass.lpszClassName = _T("Window Class Name");
+    RegisterClass(&WndClass);
+    hwnd = CreateWindow(_T("Window Class Name"),
+        _T("Window Title Name"),
+        WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        CW_USEDEFAULT,
+        NULL,
+        NULL,
+        hInstance,
+        NULL
+    );
+    ShowWindow(hwnd, nCmdShow);
+    UpdateWindow(hwnd);
+    while (GetMessage(&msg, NULL, 0, 0))
+    {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    return (int)msg.wParam;
+}
+
+#define LINE 1  
+#define ELLIPSE 2 
+#define RECTANGLE 3 
+
+COLORREF ColorSelection(HWND hwnd, COLORREF oldColor) { // 이전 사용하던 color
+    COLORREF tmp[16]; CHOOSECOLOR COLOR;
+    for (int i = 0; i < 16; i++)
+        tmp[i] = RGB(rand() % 256, rand() % 256, rand() % 256);
+    memset(&COLOR, 0, sizeof(CHOOSECOLOR));
+    COLOR.lStructSize = sizeof(CHOOSECOLOR);
+    COLOR.hwndOwner = hwnd;
+    COLOR.lpCustColors = tmp;
+    COLOR.Flags = CC_FULLOPEN;
+    if (ChooseColor(&COLOR) != 0)
+        return COLOR.rgbResult;
+    else
+        return oldColor;
+}
+
+object* inform[200];
+
+
+LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
+{
+    HPEN hPen, oldPen;
+    HBRUSH hBrush, oldBrush;
+    HDC hdc;
+    PAINTSTRUCT ps;
+    static int object_mode, startX, startY, endX, endY, oldX, oldY, cnt;
+    static BOOL drag;
+    static COLORREF bp, wp;
+
+    switch (iMsg)
+    {
+    case WM_CREATE:
+        cnt = 0;
+        bp = RGB(0, 0, 0);
+        wp = RGB(255, 255, 255);
+        drag = false;
+        break;
+    case WM_COMMAND:
+        switch (LOWORD(wParam)) {
+        case ID_LINE:
+            object_mode = LINE;
+            break;
+        case ID_ELLIPSE:
+            object_mode = ELLIPSE;
+            break;
+        case ID_RECTANGLE:
+            object_mode = RECTANGLE;
+            break;
+        case ID_PENCOLOR:
+            bp = ColorSelection(hwnd, bp);
+            break;
+        case ID_FACECOLOR:
+            wp = ColorSelection(hwnd, wp);
+            break;
+        }
+        break;
+    case WM_LBUTTONDOWN:
+        drag = true;
+        startX = oldX = LOWORD(lParam);
+        startY = oldY = HIWORD(lParam);
+        break;
+
+    case WM_LBUTTONUP:
+        drag = FALSE;
+        if (object_mode == LINE) { inform[cnt++] = new Line(startX, startY, endX, endY); }
+        else if (object_mode == ELLIPSE) { inform[cnt++] = new Ellip(startX, startY, endX, endY); }
+        else if (object_mode == RECTANGLE) { inform[cnt++] = new Rect(startX, startY, endX, endY); }
+        InvalidateRgn(hwnd, NULL, true);
+        break;
+
+    case WM_MOUSEMOVE:
+        hdc = GetDC(hwnd);
+        if (drag) {
+            SetROP2(hdc, R2_NOTXORPEN);
+
+            endX = LOWORD(lParam);
+            endY = HIWORD(lParam);
+
+            hPen = CreatePen(PS_SOLID, 1, bp);
+            oldPen = (HPEN)SelectObject(hdc, hPen);
+            hBrush = CreateSolidBrush(wp);
+            oldBrush = (HBRUSH)SelectObject(hdc, hBrush);
+
+            switch (object_mode) {
+            case LINE:
+                MoveToEx(hdc, startX, startY, NULL);
+                LineTo(hdc, oldX, oldY);
+                MoveToEx(hdc, startX, startY, NULL);
+                LineTo(hdc, endX, endY);
+                break;
+            case ELLIPSE:
+                Ellipse(hdc, startX, startY, oldX, oldY);
+                Ellipse(hdc, startX, startY, endX, endY);
+                break;
+            case RECTANGLE:
+                Rectangle(hdc, startX, startY, oldX, oldY);
+                Rectangle(hdc, startX, startY, endX, endY);
+                break;
+            }
+            oldX = endX; oldY = endY;
+            SelectObject(hdc, oldPen);
+            DeleteObject(hPen);
+        }
+        ReleaseDC(hwnd, hdc);
+        break;
+
+    case WM_PAINT:
+
+        hdc = BeginPaint(hwnd, &ps);
+
+        hPen = CreatePen(PS_SOLID, 1, bp);
+        oldPen = (HPEN)SelectObject(hdc, hPen);
+        hBrush = CreateSolidBrush(wp);
+        oldBrush = (HBRUSH)SelectObject(hdc, hBrush);
+
+        for (int i = 0; i < cnt; i++) {
+            if (object_mode == LINE)
+            {
+                inform[i]->Draw(hdc);
+            }
+            else if (object_mode == ELLIPSE)
+            {
+                inform[i]->Draw(hdc);
+            }
+            else if (object_mode == RECTANGLE)
+            {
+                inform[i]->Draw(hdc);
+            }
+        }
+
+        EndPaint(hwnd, &ps);
+        break;
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+    }
+    return DefWindowProc(hwnd, iMsg, wParam, lParam);
+}
