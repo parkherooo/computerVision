@@ -1,0 +1,20 @@
+import math
+
+def get_num():
+  x1 = int(input("점A x좌표:"))
+  y1 = int(input("점A y좌표:"))
+  x2 = int(input("점B x좌표:"))
+  y2 = int(input("점B y좌표:"))
+return [x1,y1,x2,y2]
+
+def radian(arr):
+  rad= math.atan2(arr[3]-arr[1],arr[2]-arr[0])
+return rad
+
+def degree(rad):
+  PI = math.pi
+  deg=(rad*180)/PI
+  print(deg,"도 입니다.")
+arr=get_num()
+rad=radian(arr)
+degree(rad)
