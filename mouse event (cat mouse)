@@ -1,0 +1,243 @@
+#include <windows.h>
+#include <TCHAR.h>
+#include "resource.h"
+#define LINE 1
+#define ELLIPSE 2
+#define RECTANGLE 3
+int object_mode = 0;
+LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam);
+class Point {
+	int x, y;
+public:
+	Point(int a, int b) :x(a), y(b) {};
+	int GetX() { return x;}
+	int GetY() { return y;}
+};
+
+class Object {
+public:
+	Point sp, ep;
+	
+	HDC hdc;
+	PAINTSTRUCT ps;
+	CHOOSECOLOR COLOR;
+	int startx, starty, endx, endy;
+	HPEN hPen, oldPen;
+	HBRUSH hBrush, oldBrush;
+	COLORREF color, PenColor = RGB(0, 0, 0), BrushColor = (RGB(255, 255, 255));
+	Object(int x1, int y1, int x2, int y2) : sp(x1, y1), ep(x2, y2) {};
+	virtual void Draw(HDC hdc) {}; 
+};
+class Line :public Object {
+public:
+	Line(int x1, int y1, int x2, int y2) : Object(x1, y1, x2, y2){}
+	void Draw(HDC hdc) {
+		SetROP2(hdc, R2_NOTXORPEN);
+		hPen = CreatePen(PS_SOLID, 1, PenColor);
+		oldPen = (HPEN)SelectObject(hdc, hPen);
+		MoveToEx(hdc, sp.GetX(),sp.GetY(), NULL);
+		LineTo(hdc, ep.GetX(),ep.GetY());
+	}
+};
+class Circle :public Object {
+public:
+	Circle(int x1, int y1, int x2, int y2) : Object(x1, y1, x2, y2) {}
+	void Draw(HDC hdc) {
+		SetROP2(hdc, R2_NOTXORPEN);
+		hPen = CreatePen(PS_SOLID, 1, PenColor);
+		oldPen = (HPEN)SelectObject(hdc, hPen);
+		hBrush = CreateSolidBrush(BrushColor);
+		oldBrush = (HBRUSH)SelectObject(hdc, hBrush);
+		Ellipse(hdc, sp.GetX(), sp.GetY(), ep.GetX(), ep.GetY());
+	}
+};
+class Rect :public Object {
+public:
+	Rect(int x1, int y1, int x2, int y2) : Object(x1, y1, x2, y2) {}
+	void Draw(HDC hdc) {
+		SetROP2(hdc, R2_NOTXORPEN);
+		hPen = CreatePen(PS_SOLID, 1, PenColor);
+		oldPen = (HPEN)SelectObject(hdc, hPen);
+		hBrush = CreateSolidBrush(BrushColor);
+		oldBrush = (HBRUSH)SelectObject(hdc, hBrush);
+		Rectangle(hdc, sp.GetX(), sp.GetY(), ep.GetX(), ep.GetY());
+	}
+};
+Object* inform[200];
+int i = 0;
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLine, int nCmdShow)
+{
+	HWND     hwnd;
+	MSG		 msg;
+	WNDCLASS WndClass;
+	WndClass.style = CS_HREDRAW | CS_VREDRAW;
+	WndClass.lpfnWndProc = WndProc;
+	WndClass.cbClsExtra = 0;
+	WndClass.cbWndExtra = 0;
+	WndClass.hInstance = hInstance;
+	WndClass.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+
+	WndClass.hCursor = LoadCursor(NULL, IDC_ARROW);  
+
+	WndClass.hbrBackground = (HBRUSH)GetStockObject(WHITE_BRUSH);
+	WndClass.lpszMenuName = MAKEINTRESOURCE(IDR_MENU4_2);
+	WndClass.lpszClassName = _T("Window Class Name");
+	RegisterClass(&WndClass);
+	hwnd = CreateWindow(_T("Window Class Name"),
+		_T("Window Title Name"),
+		WS_OVERLAPPEDWINDOW,
+		CW_USEDEFAULT,
+		CW_USEDEFAULT,
+		CW_USEDEFAULT,
+		CW_USEDEFAULT,
+		NULL,
+		NULL,
+		hInstance,
+		NULL
+	);
+	ShowWindow(hwnd, nCmdShow);
+	UpdateWindow(hwnd);
+	while (GetMessage(&msg, NULL, 0, 0))
+	{
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+	return (int)msg.wParam;
+}
+COLORREF ColorSelection(HWND hwnd, COLORREF oldColor) {
+	COLORREF tmp[16];
+	CHOOSECOLOR COLOR;
+
+	for (int i = 0; i < 16; i++) {
+		tmp[i] = RGB(rand() % 256, rand() % 256, rand() % 256);
+	}
+
+	memset(&COLOR, 0, sizeof(CHOOSECOLOR));
+	COLOR.lStructSize = sizeof(CHOOSECOLOR);
+	COLOR.hwndOwner = hwnd;
+	COLOR.lpCustColors = tmp;
+	COLOR.Flags = CC_FULLOPEN;
+
+	if (ChooseColor(&COLOR) != 0) {
+		return COLOR.rgbResult;
+	}
+	else return oldColor;
+
+}
+LRESULT CALLBACK WndProc(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
+{
+	HDC hdc;
+	PAINTSTRUCT ps;
+	CHOOSECOLOR COLOR;
+	HPEN hPen, oldPen;
+	HBRUSH hBrush, oldBrush;
+	static BOOL Drag;
+	static int startx, oldx, endx, starty, oldy, endy;
+	static COLORREF color, PenColor = RGB(0, 0, 0), BrushColor = (RGB(255, 255, 255));
+
+	switch (iMsg)
+	{
+	case WM_CREATE:
+
+		startx = oldx = 0;
+		starty = oldy = 0;
+		Drag = FALSE;
+		break;
+
+	case WM_PAINT:
+		hdc = BeginPaint(hwnd, &ps);
+		for (int j = 0; j < i; j++) {
+			inform[j]->Draw(hdc);
+		}
+		EndPaint(hwnd, &ps);
+		break;
+
+	case WM_LBUTTONDOWN:
+		Drag = TRUE;
+		oldx = startx = LOWORD(lParam);
+		oldy = starty = HIWORD(lParam);
+		break;
+
+	case WM_LBUTTONUP:
+		Drag = FALSE;
+		i++;
+		break;
+
+	case WM_COMMAND:
+		switch (LOWORD(wParam)) {
+		case ID_PENCOLOR:
+			PenColor = ColorSelection(hwnd, PenColor);
+			break;
+		case ID_FACECOLOR:
+			BrushColor = ColorSelection(hwnd, BrushColor);
+			break;
+
+		case ID_LINE:
+			object_mode = LINE;
+			break;
+
+		case ID_ELLIPSE:
+			object_mode = ELLIPSE;
+			break;
+
+		case ID_RECTANGLE:
+			object_mode = RECTANGLE;
+			break;
+
+		}
+		break;
+	case WM_MOUSEMOVE:
+		hdc = GetDC(hwnd);
+
+		if (Drag) {
+
+			SetROP2(hdc, R2_NOTXORPEN);
+			hBrush = CreateSolidBrush(BrushColor);
+			oldBrush = (HBRUSH)SelectObject(hdc, hBrush);
+			hPen = CreatePen(PS_SOLID, 1, RGB(0, 0, 0));
+			oldPen = (HPEN)SelectObject(hdc, hPen);
+
+			endx = LOWORD(lParam);
+			endy = HIWORD(lParam);
+
+			switch (object_mode) {
+			case LINE:
+				MoveToEx(hdc, startx, starty, NULL);
+				LineTo(hdc, oldx, oldy);
+
+				MoveToEx(hdc, startx, starty, NULL);
+				LineTo(hdc, endx, endy);
+
+				oldx = endx;
+				oldy = endy;
+				inform[i] = new Line(startx, starty, endx, endy);
+				break;
+
+			case ELLIPSE:
+				Ellipse(hdc, startx, starty, oldx, oldy);
+				Ellipse(hdc, startx, starty, endx, endy);
+				oldx = endx;
+				oldy = endy;
+				inform[i] = new Circle(startx, starty, endx, endy);
+				break;
+
+			case RECTANGLE:
+				Rectangle(hdc, startx, starty, oldx, oldy);
+				Rectangle(hdc, startx, starty, endx, endy);
+				oldx = endx;
+				oldy = endy;
+				inform[i] = new Rect(startx, starty, endx, endy);
+				break;
+			}
+		}
+		ReleaseDC(hwnd, hdc);
+		break;
+
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		break;
+	}
+
+	return DefWindowProc(hwnd, iMsg, wParam, lParam);
+}
