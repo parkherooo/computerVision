@@ -1,0 +1,37 @@
+import cv2
+
+# 마우스 이벤트 처리 함수
+drag = False
+
+def onMouse(event, x, y, flags, param):
+    global ix, iy, drag, img, img_2
+    
+    if event == cv2.EVENT_LBUTTONDOWN:
+        drag = True
+        ix, iy = x, y
+    
+    elif event == cv2.EVENT_LBUTTONUP:
+        drag = False
+        cv2.rectangle(img, (ix, iy), (x, y), (0, 255, 0), 2)
+        roi = img_2[iy:y, ix:x]
+        roi_gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+        cv2.imshow('roi', roi_gray)
+
+# 이미지 읽기
+img = cv2.imread('aa.jpg', cv2.IMREAD_COLOR)
+img_2 = img.copy()
+
+# 창 생성 및 이벤트 바인딩
+cv2.imshow('image', img)
+cv2.setMouseCallback('image', onMouse)
+
+# 사각형 그리기
+ix, iy = -1, -1
+
+while True:
+    cv2.imshow('image', img)
+    k = cv2.waitKey(1) & 0xFF
+    if k == 27:  # ESC 키 누르면 종료
+        break
+
+cv2.destroyAllWindows()
