@@ -1,0 +1,127 @@
+#include<iostream>
+#include<string>
+#include<ctime>
+
+using namespace std;
+
+class Dice {
+
+private:
+
+	int face;
+
+public:
+
+	void roll() {
+
+		int face = rand() % 6 + 1;
+
+		cout << "주사위 값은 " << face <<" 입니다."<< endl;
+
+	}
+
+};
+
+void p3() {
+
+	int i = 0;
+	int number=0;
+
+	cout << "주사위를 몇번 굴리겠습니까?" << endl;
+		;
+	cin >> number;
+
+	srand(time(NULL));
+
+	for (i; i < number; i++) {
+		Dice dice1;
+
+		dice1.roll();
+
+	}
+	
+
+}
+
+class Complex {
+public:
+    void addition();
+    void subtraction();
+    void Printf();
+    double ImaginaryQuantity1[10] = { 0 };
+    double WholeNumber1[10] = { 0 };
+    double ImaginaryQuantity2[10] = { 0 };
+    double WholeNumber2[10] = { 0 };
+
+};
+
+void
+Complex::addition() { //복소수 더하기 함수
+    int count;
+    double Ivalue[10] = { 0 };
+    double Wvalue[10] = { 0 };
+    cout << "더하기 연산을 총 몇번 하시겠습니까?" << endl;
+    cin >> count;
+    for (int i = 0; i < count; i++) {
+        cout << "첫번째 복소수의 실수부를 입력해주세요:" << endl;
+        cin >> ImaginaryQuantity1[i];
+        cout << "첫번째 복소수의 허수부를 입력해주세요:" << endl;
+        cin >> WholeNumber1[i];
+        cout << "두번째 복소수의 실수부를 입력해주세요:" << endl;
+        cin >> ImaginaryQuantity2[i];
+        cout << "두번째 복소수의 허수부를 입력해주세요:" << endl;
+        cin >> WholeNumber2[i];
+        Ivalue[i] = ImaginaryQuantity1[i] + ImaginaryQuantity2[i];
+        Wvalue[i] = WholeNumber1[i] + WholeNumber2[i];
+        cout << Ivalue[i] << "+" << Wvalue[i] << "i" << endl;
+    }
+
+
+}
+
+void
+Complex::subtraction() { //복소수 빼기 함수
+    int count;
+    double Ivalue[10] = { 0 };
+    double Wvalue[10] = { 0 };
+    cout << "빼기 연산을 총 몇번 하시겠습니까?" << endl;
+    cin >> count;
+    for (int i = 0; i < count; i++) {
+        cout << "첫번째 복소수의 실수부를 입력해주세요:" << endl;
+        cin >> ImaginaryQuantity1[i];
+        cout << "첫번째 복소수의 허수부를 입력해주세요:" << endl;
+        cin >> WholeNumber1[i];
+        cout << "두번째 복소수의 실수부를 입력해주세요:" << endl;
+        cin >> ImaginaryQuantity2[i];
+        cout << "두번째 복소수의 허수부를 입력해주세요:" << endl;
+        cin >> WholeNumber2[i];
+        Ivalue[i] = ImaginaryQuantity1[i] - ImaginaryQuantity2[i];
+        Wvalue[i] = WholeNumber1[i] - WholeNumber2[i];
+        cout << Ivalue[i] << "+" << Wvalue[i] << "i" << endl;
+    }
+}
+
+void
+Complex::Printf() {
+    Complex addition();
+    Complex subtraction();
+}
+
+void p6() {
+    cout << endl;
+    Complex Complex1;
+    Complex1.addition();
+    Complex1.subtraction();
+}
+
+
+int main() {
+
+	p3();
+	p6();
+
+	return 0;
+
+}
+
+
